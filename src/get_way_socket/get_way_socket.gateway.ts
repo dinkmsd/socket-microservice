@@ -1,45 +1,40 @@
-import { Logger } from '@nestjs/common';
-
 import {
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  MessageBody,
+  ConnectedSocket,
 } from '@nestjs/websockets';
-import { Server } from 'ws';
+import { Logger } from '@nestjs/common';
+import { Socket, Server } from 'socket.io';
 
 @WebSocketGateway()
-export class DataGateway
+export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  @WebSocketServer() io: Server;
-  private readonly logger = new Logger(DataGateway.name);
+  private logger: Logger = new Logger('ChatGateway');
 
-  afterInit() {
-    this.logger.log('Initialized');
+  afterInit(server: Server) {
+    this.logger.log('Init');
   }
 
-  handleConnection(client: any, ...args: any[]) {
-    this.logger.log(`Client id: ${client.id} connected`);
+  handleConnection(client: Socket, ...args: any[]) {
+    this.logger.log(`Client connected: ${client.id}`);
   }
 
-  handleDisconnect(client: any) {
-    this.logger.log(`Cliend id:${client.id} disconnected`);
+  handleDisconnect(client: Socket) {
+    this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('ping')
-  handleMessage(client: any, data: any) {
-    this.logger.log(`Message received from client id: ${client.id}`);
-    this.logger.debug(`Payload: ${data}`);
-    return {
-      event: 'pong',
-      data: 'Wrong data that will make the test fail',
-    };
-  }
-
-  emitMessage(event: string, data: any) {
-    this.io.emit(event, data);
+  @SubscribeMessage('message')
+  handleMessage(
+    @MessageBody() data: string,
+    @ConnectedSocket() client: Socket,
+  ): string {
+    this.logger.log(`Message from client ${client.id}: ${data}`);
+    client.broadcast.emit('message', data); // Broadcast to all clients except the sender
+    return data;
   }
 }
