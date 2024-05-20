@@ -1,40 +1,28 @@
 import {
-  SubscribeMessage,
   WebSocketGateway,
-  OnGatewayInit,
+  SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  MessageBody,
-  ConnectedSocket,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
-import { Socket, Server } from 'socket.io';
+import { Server } from 'ws';
 
 @WebSocketGateway()
-export class ChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
-  private logger: Logger = new Logger('ChatGateway');
+export class SocketGateway {
+  @WebSocketServer() server: Server;
 
-  afterInit(server: Server) {
-    this.logger.log('Init');
+  handleConnection(client: any) {
+    console.log('Client connected');
   }
 
-  handleConnection(client: Socket, ...args: any[]) {
-    this.logger.log(`Client connected: ${client.id}`);
-  }
-
-  handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+  handleDisconnect(client: any) {
+    console.log('Client disconnected');
   }
 
   @SubscribeMessage('message')
-  handleMessage(
-    @MessageBody() data: string,
-    @ConnectedSocket() client: Socket,
-  ): string {
-    this.logger.log(`Message from client ${client.id}: ${data}`);
-    client.broadcast.emit('message', data); // Broadcast to all clients except the sender
-    return data;
+  handleMessage(client: any, payload: any): string {
+    console.log('Received message:', payload);
+    this.server.emit('message', payload);
+    return 'Message received!';
   }
 }
