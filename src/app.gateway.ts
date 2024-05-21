@@ -7,9 +7,9 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Server } from 'ws';
+import { Server, Socket } from 'socket.io';
 
-@WebSocketGateway(4433, { transports: ['websocket'], cors: true })
+@WebSocketGateway(5000, { cors: true })
 export class AppGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -20,21 +20,17 @@ export class AppGateway
     console.log('WebSocket server initialized');
   }
 
-  handleConnection(client: any) {
+  handleConnection(client: Socket) {
     console.log('Client connected:', client.id);
   }
 
-  handleDisconnect(client: any) {
+  handleDisconnect(client: Socket) {
     console.log('Client disconnected:', client.id);
   }
 
   @SubscribeMessage('message')
-  handleMessage(@MessageBody() message: string): void {
+  handleMessage(@MessageBody() message: string, client: Socket): void {
     console.log('Received message:', message);
-    this.server.clients.forEach((client) => {
-      if (client.readyState === client.OPEN) {
-        client.send(`Echo: ${message}`);
-      }
-    });
+    this.server.emit('message', `Echo: ${message}`);
   }
 }
